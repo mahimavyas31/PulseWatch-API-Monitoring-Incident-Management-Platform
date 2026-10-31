@@ -112,7 +112,7 @@ tests/
   on the free tier remove the worker and set `EMBEDDED_SCHEDULER=true` — but free web services
   sleep when idle, so checks pause while asleep.
 
-## Known limitations (be upfront about these in interviews)
+## Known limitations
 - Hostname is validated and then resolved again by HTTPX, so a DNS-rebinding attack is theoretically possible. Mitigation: pin the resolved IP.
 - No login rate limiting, no CSRF tokens (SameSite=Lax cookie only), no email verification.
 - Each check does a single GET; no custom headers/methods/expected-body assertions.
