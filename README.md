@@ -1,4 +1,4 @@
-# ⚡ PulseWatch — API Monitoring & Incident Management
+# PulseWatch — API Monitoring & Incident Management
 
 Register HTTP endpoints, check them on a schedule, track uptime and response times,
 and get incidents + email alerts when a service goes down and when it recovers.
@@ -120,3 +120,4 @@ tests/
 ## Ideas to extend
 login rate limiting · pinned-IP requests (DNS-rebinding fix) · median/MAD anomaly detection ·
 multi-region probes · Redis-backed job queue.
+
