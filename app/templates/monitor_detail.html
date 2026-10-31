@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_badge.html" import badge %}
+{% block title %}{{ m.name }} · PulseWatch{% endblock %}
+{% block content %}
+<a href="/dashboard" class="small">&larr; All monitors</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center my-2 gap-2">
+  <div>
+    <h1 class="h3 mb-0">{{ m.name }} {{ badge(status) }}</h1>
+    <div class="text-muted small">{{ m.url }} · every {{ m.interval_seconds }}s · timeout {{ m.timeout_seconds }}s
+      · expects <code>{{ m.expected_status }}</code>{% if m.expected_body %} + body contains <code>{{ m.expected_body }}</code>{% endif %}
+      {% if m.webhook_url %}· webhook ✔{% endif %}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <form method="post" action="/dashboard/monitors/{{ m.id }}/check"><button class="btn btn-outline-primary btn-sm">Check now</button></form>
+    <form method="post" action="/dashboard/monitors/{{ m.id }}/public"><button class="btn btn-outline-secondary btn-sm">{{ '🌐 Public: on' if m.is_public else 'Public: off' }}</button></form>
+    <form method="post" action="/dashboard/monitors/{{ m.id }}/toggle"><button class="btn btn-outline-secondary btn-sm">{{ 'Pause' if m.is_active else 'Resume' }}</button></form>
+    <form method="post" action="/dashboard/monitors/{{ m.id }}/delete" onsubmit="return confirm('Delete this monitor and all its history?')"><button class="btn btn-outline-danger btn-sm">Delete</button></form>
+  </div>
+</div>
+
+<div class="row g-3 my-1">
+  <div class="col-md-4"><div class="card card-body"><div class="text-muted small">Uptime (24h)</div><div class="h4 mb-0">{{ (uptime_24h ~ '%') if uptime_24h is not none else '—' }}</div></div></div>
+  <div class="col-md-4"><div class="card card-body"><div class="text-muted small">Uptime (7d)</div><div class="h4 mb-0">{{ (uptime_7d ~ '%') if uptime_7d is not none else '—' }}</div></div></div>
+  <div class="col-md-4"><div class="card card-body"><div class="text-muted small">Avg response (24h)</div><div class="h4 mb-0">{{ (avg_ms ~ ' ms') if avg_ms is not none else '—' }}</div></div></div>
+</div>
+
+<div class="card card-body my-3">
+  <h2 class="h6">Response time (last {{ chart_values|length }} checks) — red points are anomalies</h2>
+  {% if chart_values %}<canvas id="rt" height="80"></canvas>{% else %}<div class="text-muted">No data yet. Click “Check now” or wait for the scheduler.</div>{% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card"><div class="card-header">Recent checks</div>
+    <div class="table-responsive"><table class="table table-sm mb-0">
+      <thead><tr><th>Time</th><th>Result</th><th>HTTP</th><th>ms</th><th>Error</th></tr></thead>
+      <tbody>
+      {% for c in checks %}
+        <tr><td class="small">{{ c.checked_at|dt }}</td>
+            <td>{{ '✅' if c.is_success else '❌' }}{% if c.is_anomaly %} <span title="Anomaly: z={{ c.z_score }}">⚠️</span>{% endif %}</td>
+            <td>{{ c.status_code or '—' }}</td><td>{{ c.response_ms if c.response_ms is not none else '—' }}</td>
+            <td class="small">{{ c.error_type or '' }}{% if c.z_score is not none %} z={{ c.z_score }}{% endif %}</td></tr>
+      {% else %}<tr><td colspan="5" class="text-muted text-center py-3">No checks yet</td></tr>{% endfor %}
+      </tbody></table></div></div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card"><div class="card-header">Incidents</div>
+    <ul class="list-group list-group-flush">
+      {% for i in incidents %}
+      <li class="list-group-item">
+        <span class="badge text-bg-{{ 'danger' if i.status == 'open' else 'success' }}">{{ i.status }}</span>
+        <span class="small">{{ i.reason }}</span><br>
+        <span class="text-muted small">{{ i.started_at|dt }} → {{ i.resolved_at|dt or 'ongoing' }} ({{ i.duration_seconds }}s)</span>
+      </li>
+      {% else %}<li class="list-group-item text-muted">No incidents 🎉</li>{% endfor %}
+    </ul></div>
+  </div>
+</div>
+
+{% if chart_values %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+new Chart(document.getElementById('rt'), {
+  type: 'line',
+  data: { labels: {{ chart_labels|tojson }},
+          datasets: [{ label: 'Response time (ms)', data: {{ chart_values|tojson }},
+                       borderColor: '#0d6efd', tension: .25, spanGaps: false,
+                       pointBackgroundColor: {{ chart_anoms|tojson }}.map(a => a ? '#dc3545' : '#0d6efd'),
+                       pointRadius: {{ chart_anoms|tojson }}.map(a => a ? 6 : 3) }] },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+</script>
+{% endif %}
+{% endblock %}

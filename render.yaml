@@ -1,0 +1,27 @@
+# Render Blueprint. NOTE: background workers are a paid instance type on Render.
+# Free alternative: delete the worker and set EMBEDDED_SCHEDULER=true on the web service
+# (free web services sleep when idle, so monitoring pauses while asleep).
+databases:
+  - name: pulsewatch-db
+    plan: free
+services:
+  - type: web
+    name: pulsewatch-web
+    runtime: docker
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: {name: pulsewatch-db, property: connectionString}
+      - key: SECRET_KEY
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: "true"
+  - type: worker
+    name: pulsewatch-scheduler
+    runtime: docker
+    dockerCommand: python -m scheduler.runner
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: {name: pulsewatch-db, property: connectionString}
+      - key: SECRET_KEY
+        sync: false

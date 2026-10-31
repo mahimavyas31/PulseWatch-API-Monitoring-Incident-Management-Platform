@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "_badge.html" import badge %}
+{% block title %}Dashboard · PulseWatch{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Monitors</h1>
+  <a class="btn btn-outline-secondary btn-sm" href="/status/{{ user.status_slug }}" target="_blank">🌐 Your public status page</a>
+</div>
+
+{% if open_incidents %}
+<div class="alert alert-danger">
+  <strong>{{ open_incidents|length }} open incident{{ 's' if open_incidents|length != 1 }}.</strong>
+  Affected monitors are marked DOWN below.
+</div>
+{% endif %}
+
+<div class="card mb-4">
+  <div class="table-responsive">
+  <table class="table table-hover mb-0">
+    <thead><tr><th>Name</th><th>URL</th><th>Status</th><th>Public</th><th>Uptime 24h</th><th>Last response</th><th>Last checked</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><a href="/dashboard/monitors/{{ r.m.id }}">{{ r.m.name }}</a></td>
+        <td class="text-muted small">{{ r.m.url }}</td>
+        <td>{{ badge(r.status) }}{% if r.slow %} <span class="badge text-bg-warning" title="Response time far above its recent baseline">SLOW</span>{% endif %}</td>
+        <td>{{ '🌐' if r.m.is_public else '' }}</td>
+        <td>{{ (r.uptime ~ '%') if r.uptime is not none else '—' }}</td>
+        <td>{{ (r.last_ms ~ ' ms') if r.last_ms is not none else '—' }}</td>
+        <td class="small">{{ r.m.last_checked_at|dt or '—' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="text-center text-muted py-4">No monitors yet. Add one below.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card card-body">
+  <h2 class="h5">Add monitor</h2>
+  <form method="post" action="/dashboard/monitors" class="row g-2">
+    <div class="col-md-3"><input class="form-control" name="name" placeholder="Name" maxlength="100" required></div>
+    <div class="col-md-5"><input class="form-control" name="url" placeholder="https://api.example.com/health" required></div>
+    <div class="col-md-2"><input class="form-control" type="number" name="interval_seconds" value="60" min="30" title="Interval (seconds)"></div>
+    <div class="col-md-2"><input class="form-control" type="number" name="timeout_seconds" value="10" min="1" max="30" title="Timeout (seconds)"></div>
+    <div class="col-md-3"><input class="form-control" name="expected_status" value="200-399" title="Expected status codes, e.g. 200 or 200,204 or 200-299"></div>
+    <div class="col-md-4"><input class="form-control" name="expected_body" placeholder="Body must contain… (optional)" maxlength="255"></div>
+    <div class="col-md-5"><input class="form-control" name="webhook_url" placeholder="Slack/webhook URL for alerts (optional)"></div>
+    <div class="col-md-6 form-check ms-2"><input class="form-check-input" type="checkbox" name="is_public" id="pub"><label class="form-check-label" for="pub">Show on public status page</label></div>
+    <div class="col-md-2 d-grid ms-auto"><button class="btn btn-primary">Add</button></div>
+  </form>
+  <div class="form-text">Interval/timeout in seconds. Private and loopback addresses are blocked. Discord webhooks: append <code>/slack</code> to the URL.</div>
+</div>
+{% endblock %}

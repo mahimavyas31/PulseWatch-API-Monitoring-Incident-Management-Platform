@@ -1,0 +1,39 @@
+# One command: docker compose up --build   ->   http://localhost:8000
+x-app-env: &app-env
+  DATABASE_URL: postgresql+psycopg://pulsewatch:devpassword@db:5432/pulsewatch
+  SECRET_KEY: ${SECRET_KEY:-dev-only-change-me}
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: pulsewatch
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: pulsewatch
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulsewatch"]
+      interval: 3s
+      retries: 20
+
+  web:
+    build: .
+    environment: *app-env
+    ports: ["8000:8000"]
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      retries: 20
+
+  scheduler:            # separate process: runs the periodic checks
+    build: .
+    command: python -m scheduler.runner
+    environment: *app-env
+    depends_on:
+      web: {condition: service_healthy}   # web creates the tables first
+
+volumes:
+  pgdata:

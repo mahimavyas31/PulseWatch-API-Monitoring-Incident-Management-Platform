@@ -1,0 +1,4 @@
+{% macro badge(status) -%}
+{%- set colors = {'up':'success','degraded':'warning','down':'danger','unknown':'secondary','paused':'dark'} -%}
+<span class="badge text-bg-{{ colors.get(status, 'secondary') }}">{{ status|upper }}</span>
+{%- endmacro %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_badge.html" import badge %}
+{% block title %}Service status{% endblock %}
+{% block content %}
+<meta http-equiv="refresh" content="60">
+{% set banner = {'up':('success','All systems operational'),'degraded':('warning','Some services are slow'),'down':('danger','Service disruption'),'unknown':('secondary','No data yet')} %}
+<div class="alert alert-{{ banner[overall][0] }} h5">{{ banner[overall][1] }}</div>
+
+<div class="card mb-4">
+  <ul class="list-group list-group-flush">
+  {% for r in rows %}
+    <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div><strong>{{ r.name }}</strong>
+        <div class="text-muted small">Uptime 24h: {{ (r.uptime_24h ~ '%') if r.uptime_24h is not none else '—' }}
+          · 7d: {{ (r.uptime_7d ~ '%') if r.uptime_7d is not none else '—' }}
+          · avg {{ (r.avg_ms ~ ' ms') if r.avg_ms is not none else '—' }}</div></div>
+      {{ badge(r.status) }}
+    </li>
+  {% else %}
+    <li class="list-group-item text-muted">No public services yet.</li>
+  {% endfor %}
+  </ul>
+</div>
+
+<h2 class="h5">Recent incidents</h2>
+<ul class="list-group">
+{% for x in incidents %}
+  <li class="list-group-item">
+    <span class="badge text-bg-{{ 'danger' if x.i.status == 'open' else 'success' }}">{{ x.i.status }}</span>
+    <strong>{{ x.name }}</strong>
+    <span class="text-muted small">— {{ x.i.started_at|dt }} → {{ x.i.resolved_at|dt or 'ongoing' }} ({{ x.i.duration_seconds }}s)</span>
+  </li>
+{% else %}<li class="list-group-item text-muted">No incidents reported.</li>{% endfor %}
+</ul>
+<p class="text-muted small mt-3">Powered by PulseWatch · refreshes every 60 seconds</p>
+{% endblock %}
